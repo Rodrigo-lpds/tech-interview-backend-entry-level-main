@@ -3,6 +3,9 @@ class CartItem < ApplicationRecord
   belongs_to :product
   has_many :cart_items, dependent: :destroy
 
+  validates_presence_of :quantity
+  validates_numericality_of :quantity, greater_than_or_equal_to: 1
+
   after_commit :update_cart_total_price
 
   def unit_price

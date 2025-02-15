@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :cart_item do
-    shopping_cart
+    association :cart # Creates a cart instance automatically
     product
     quantity { 1 }
   end

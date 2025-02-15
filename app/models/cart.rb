@@ -5,8 +5,6 @@ class Cart < ApplicationRecord
   has_many :products, through: :cart_items
   
   after_commit :update_cart_activity
-
-  # TODO: lógica para marcar o carrinho como abandonado e remover se abandonado
   
   def update_cart_activity
     CartService.update_cart_activity(id)
@@ -17,7 +15,7 @@ class Cart < ApplicationRecord
   end
 
   def mark_as_abandoned
-    return if last_interaction_at > 3.hours.ago
+    return if abandoned? || last_interaction_at > 3.hours.ago
 
     update(abandoned: true)
   end
