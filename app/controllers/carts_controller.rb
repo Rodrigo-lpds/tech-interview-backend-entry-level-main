@@ -4,11 +4,7 @@
     before_action :load_cart, only: %i[ show create destroy add_item]
 
     def show
-      if @cart.present?
-        render json: format_cart_json(cart: @cart), status: :ok
-      else
-        render json: { message: 'O carrinho não foi encontrado' }, status: :not_found
-      end
+      render json: format_cart_json(cart: @cart), status: :ok
     end
 
 
