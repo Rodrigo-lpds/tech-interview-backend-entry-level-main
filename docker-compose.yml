@@ -1,7 +1,9 @@
 services:
-  app:
-    build: .
+  web:
+    build:
+      context: .
     container_name: rails_app
+    command: bundle exec rails s -p 3000 -b '0.0.0.0'
     depends_on:
       - db
       - redis
@@ -15,6 +17,8 @@ services:
       - .:/app
     stdin_open: true
     tty: true
+    networks:
+      - myapp_network
 
   db:
     image: postgres:16
@@ -28,6 +32,8 @@ services:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - myapp_network
 
   redis:
     image: redis:7.0.15
@@ -37,6 +43,8 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/data
+    networks:
+      - myapp_network
 
   sidekiq:
     build: .
@@ -50,7 +58,12 @@ services:
     command: bundle exec sidekiq
     volumes:
       - .:/app
+    networks:
+      - myapp_network
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  myapp_network:
