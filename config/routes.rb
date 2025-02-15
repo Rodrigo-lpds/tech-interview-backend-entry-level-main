@@ -5,7 +5,7 @@ Rails.application.routes.draw do
   resources :products
 
   resource :cart, controller: 'carts', only: [:show, :create, :destroy] do
-    put 'add_item', on: :member
+    post 'add_item', on: :member
   end
 
   get 'up' => 'rails/health#show', as: :rails_health_check

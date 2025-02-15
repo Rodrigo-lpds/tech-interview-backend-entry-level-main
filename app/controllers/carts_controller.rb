@@ -7,7 +7,7 @@
       if @cart.present?
         render json: format_cart_json(cart: @cart), status: :ok
       else
-        render json: { message: 'Cart is empty' }, status: :not_found
+        render json: { message: 'O carrinho não foi encontrado' }, status: :not_found
       end
     end
 

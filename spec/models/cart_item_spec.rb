@@ -50,7 +50,6 @@ RSpec.describe CartItem, type: :model do
       cart = create(:shopping_cart)
       _cart_item = create(:cart_item, cart: cart, product: product, quantity: 2)
   
-      # Reload the cart to get the updated total price from the database
       cart.reload
   
       expect(cart.total_price).to eq(200)
