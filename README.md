@@ -1,21 +1,4 @@
-# Desafio técnico e-commerce
-
-## Nossas expectativas
-
-A equipe de engenharia da RD Station tem alguns princípios nos quais baseamos nosso trabalho diário. Um deles é: projete seu código para ser mais fácil de entender, não mais fácil de escrever.
-
-Portanto, para nós, é mais importante um código de fácil leitura do que um que utilize recursos complexos e/ou desnecessários.
-
-O que gostaríamos de ver:
-
-- O código deve ser fácil de ler. Clean Code pode te ajudar.
-- Notas gerais e informações sobre a versão da linguagem e outras informações importantes para executar seu código.
-- Código que se preocupa com a performance (complexidade de algoritmo).
-- O seu código deve cobrir todos os casos de uso presentes no README, mesmo que não haja um teste implementado para tal.
-- A adição de novos testes é sempre bem-vinda.
-- Você deve enviar para nós o link do repositório público com a aplicação desenvolvida (GitHub, BitBucket, etc.).
-
-## O Desafio - Carrinho de compras
+# O Desafio - Carrinho de compras
 O desafio consiste em uma API para gerenciamento do um carrinho de compras de e-commerce.
 
 Você deve desenvolver utilizando a linguagem Ruby e framework Rails, uma API Rest que terá 3 endpoins que deverão implementar as seguintes funcionalidades:
@@ -148,71 +131,65 @@ Um carrinho é considerado abandonado quando estiver sem interação (adição o
 - Utilize um Job para gerenciar (marcar como abandonado e remover) carrinhos sem interação.
 - Configure a aplicação para executar este Job nos períodos especificados acima.
 
-### Detalhes adicionais:
-- O Job deve ser executado regularmente para verificar e marcar carrinhos como abandonados após 3 horas de inatividade.
-- O Job também deve verificar periodicamente e excluir carrinhos que foram marcados como abandonados por mais de 7 dias.
+## Implementação
+Para facilitar o desenvolvimento foi configurado as dependências necessária via docker, assim sendo necessário em sua dependência a instalação do `docker-compose v2.29.2`.
 
-### Como resolver
+Para inicialização só é necessário executar o script na raiz do projeto:
 
-#### Implementação
-Você deve usar como base o código disponível nesse repositório e expandi-lo para que atenda as funcionalidade descritas acima.
+> Talvez seja necessário executar como superuser(sudo)
 
-Há trechos parcialmente implementados e também sugestões de locais para algumas das funcionalidades sinalizados com um `# TODO`. Você pode segui-los ou fazer da maneira que julgar ser a melhor a ser feita, desde que atenda os contratos de API e funcionalidades descritas.
-
-#### Testes
-Existem testes pendentes, eles estão marcados como <span style="color:green;">Pending</span>, e devem ser implementados para garantir a cobertura dos trechos de código implementados por você.
-Alguns testes já estão passando e outros estão com erro. Com a sua implementação os testes com erro devem passar a funcionar. 
-A adição de novos testes é sempre bem-vinda, mas sem alterar os já implementados.
-
-
-### O que esperamos
-- Implementação dos testes faltantes e de novos testes para os métodos/serviços/entidades criados
-- Construção das 4 rotas solicitadas
-- Implementação de um job para controle dos carrinhos abandonados
-
-
-### Itens adicionais / Legais de ter
-- Utilização de factory na construção dos testes
-- Desenvolvimento do docker-compose / dockerização da app
-
-A aplicação já possui um Dockerfile, que define como a aplicação deve ser configurada dentro de um contêiner Docker. No entanto, para completar a dockerização da aplicação, é necessário criar um arquivo `docker-compose.yml`. O arquivo irá definir como os vários serviços da aplicação (por exemplo, aplicação web, banco de dados, etc.) interagem e se comunicam.
-
-- Adicione tratamento de erros para situações excepcionais válidas, por exemplo: garantir que um produto não possa ter quantidade negativa. 
-
-- Se desejar você pode adicionar a configuração faltante no arquivo `docker-compose.yml` e garantir que a aplicação rode de forma correta utilizando Docker. 
-
-## Informações técnicas
-
-### Dependências
-- ruby 3.3.1
-- rails 7.1.3.2
-- postgres 16
-- redis 7.0.15
-
-### Como executar o projeto
-
-## Executando a app sem o docker
-Dado que todas as as ferramentas estão instaladas e configuradas:
-
-Instalar as dependências do:
-```bash
-bundle install
+```
+./dev.sh
 ```
 
-Executar o sidekiq:
-```bash
-bundle exec sidekiq
-```
+### Testes  
 
-Executar projeto:
-```bash
-bundle exec rails server
-```
+Para executar os testes, siga os passos abaixo:  
 
-Executar os testes:
-```bash
-bundle exec rspec
-```
+1. Acesse o contêiner da aplicação:  
 
-### Como enviar seu projeto
-Salve seu código em um versionador de código (GitHub, GitLab, Bitbucket) e nos envie o link publico. Se achar necessário, informe no README as instruções para execução ou qualquer outra informação relevante para correção/entendimento da sua solução.
+   ```
+   docker exec -it rails_app bash
+   ```  
+
+2. Dentro do contêiner, execute os testes com:  
+
+   ```
+   bundle exec rspec
+   ```
+
+### Desenvolvimento da API
+A documentação da API pode ser encontrada com mais detalhes em [docs/api.md](https://github.com/Rodrigo-lpds/tech-interview-backend-entry-level-main/blob/main/docs/api.md)
+
+### Agendamento de carrinhos abandonados
+
+#### **1. Atualização da atividade do carrinho (`CartService`)**
+A classe `CartService` mantém um controle da atividade dos carrinhos usando **Redis**:
+
+- Quando um usuário interage com um carrinho (por exemplo, adicionando um item), o método `update_cart_activity(cart_id)` é chamado.  
+  - Isso armazena um timestamp no Redis com **tempo de expiração (`CART_TTL`) de 3 horas**.
+  - O Redis automaticamente remove a chave após esse tempo caso o carrinho não possua mais nenhuma interação
+
+- O método `cart_expired?(cart_id)` verifica se a chave do carrinho expirou no Redis.
+  - O Redis retorna `-2` para `ttl` quando a chave não existe mais (indicando que o carrinho ficou inativo por mais de 3 horas).
+
+#### **2. Job para marcar carrinhos abandonados (`MarkCartAsAbandonedJob`)**
+Esse job roda a cada **30 minutos** (definido no `scheduler.yml`) e executa os seguintes passos:
+
+1. **Recupera todas as chaves de carrinhos ativos no Redis** (`expired_cart_keys`).
+2. **Itera sobre essas chaves** e extrai o `cart_id`.
+3. **Verifica se o carrinho ainda existe no banco** (`cart_missing?`).
+   - Se **não existir**, apenas remove a chave do Redis.
+   - Se **existir**, ele processa o carrinho:
+     - **Marca como abandonado** (`cart.mark_as_abandoned`).
+     - **Remove, se necessário** (`cart.remove_if_abandoned`).
+4. **Remove a chave do Redis se o carrinho foi excluído** (`remove_cart_key`).
+
+
+#### **3. Como o Job age sobre carrinhos abandonados?**
+- Se um usuário **não interagir por mais de 3 horas**, o Redis automaticamente expira a chave.
+- O job roda a cada **30 minutos** e identifica quais carrinhos **não têm mais chave no Redis**.
+- Para cada carrinho encontrado:
+  - É verificado se pode **marcar como abandonado**.
+  - É verificado se pode **remover carrinho** (`remove_if_abandoned`).
+
