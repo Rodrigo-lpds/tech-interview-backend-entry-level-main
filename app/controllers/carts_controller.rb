@@ -77,7 +77,7 @@
     end
 
     def products(cart:)
-      cart.cart_items.map do |item|
+      cart.cart_items.includes(:product).map do |item|
         product = item.product
         {
           id: product.id,

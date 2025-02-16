@@ -1,6 +1,6 @@
 require 'sidekiq-scheduler'
 
-class MarkCartAsAbandoned
+class MarkCartAsAbandonedScheduler
   include Sidekiq::Job
 
   def perform
